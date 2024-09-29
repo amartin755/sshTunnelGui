@@ -17,40 +17,31 @@
  */
 
 
-#ifndef MAINDIALOG_H
-#define MAINDIALOG_H
+#ifndef CONNECTIONDIALOG_H
+#define CONNECTIONDIALOG_H
 
-#include <QList>
-#include <QApplication>
-#include <QProcess>
-#include <QTimer>
+#include "ui_connectionDialog.h"
 
-#include "ui_mainDialog.h"
-
-class MainDialog : public QDialog
+class ConnectionDialog : public QDialog
 {
     Q_OBJECT
 
 public:
-    explicit MainDialog(QApplication* theApp, QWidget *parent = nullptr);
+    explicit ConnectionDialog(QWidget *parent = nullptr);
+    ConnectionDialog(const QString& name, const QString& remotePort, const QString& localPort, const QString& remoteAddr, const QString& server, QWidget *parent);
+    
+    const QString getName () const;
+    const QString getRemotePort () const;
+    const QString getLocalPort () const;
+    const QString getRemoteAddress () const;
+    const QString getServer () const;
 
 private slots:
-    void addItem ();
-    void itemClicked (QTreeWidgetItem *item, int column);
-    void editItem (QTreeWidgetItem *item, int column);
-    void processTerminated(int exitCode, QProcess::ExitStatus exitStatus  = QProcess::NormalExit);
-    void checkConnections ();
-    void shutdown ();
+    void enableLocalPort (bool enable);
+    void setLocalPort (int val);
 
 private:
-    void keyPressEvent (QKeyEvent *e);
-    void closeEvent (QCloseEvent *event);
-    void saveConnections() const;
-    void loadConnections();
-    QList<QProcess*> m_connections;
-    Ui::Dialog m_gui;
-    QTimer m_connectionsWatchdog;
-
+    Ui::dlgConnection m_gui;
 };
 
 #endif

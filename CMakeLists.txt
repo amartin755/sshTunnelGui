@@ -86,6 +86,8 @@ set (SOURCES
     ${SOURCE_DIR}/main.cpp
     ${SOURCE_DIR}/mainDialog.ui
     ${SOURCE_DIR}/maindialog.cpp
+    ${SOURCE_DIR}/connectionDialog.ui
+    ${SOURCE_DIR}/connectiondialog.cpp
 )
 
 qt_add_executable (sshTunnelGui ${SOURCES})

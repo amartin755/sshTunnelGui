@@ -21,11 +21,12 @@
 #include <QMessageBox>
 #include <QSettings>
 #include "maindialog.h"
+#include "connectiondialog.h"
 
 enum COLUMN {enabled = 0, localPort, remotePort, remoteAddress, server};
 
 MainDialog::MainDialog(QApplication* theApp, QWidget *parent)
-    : QDialog(parent), m_connectionsWatchdog (this)
+    : QDialog (parent), m_connectionsWatchdog (this)
 {
     setWindowFlags (Qt::Window);
     m_gui.setupUi (this);
@@ -34,22 +35,12 @@ MainDialog::MainDialog(QApplication* theApp, QWidget *parent)
     connect (&m_connectionsWatchdog, &QTimer::timeout, this, &MainDialog::checkConnections);
     connect (m_gui.btnAdd, &QPushButton::clicked, this, &MainDialog::addItem);
     connect (m_gui.treeWidget, &QTreeWidget::itemClicked, this, &MainDialog::itemClicked);
+    connect (m_gui.treeWidget, &QTreeWidget::itemDoubleClicked, this, &MainDialog::editItem);
+    connect (theApp, &QApplication::aboutToQuit, this, &MainDialog::shutdown, Qt::DirectConnection);
     loadConnections();
-    connect (m_gui.treeWidget, &QTreeWidget::itemChanged, this, &MainDialog::itemChanged);
-//    connect (theApp, &QApplication::aboutToQuit, this, &MainDialog::saveState, Qt::DirectConnection);
 
 }
-/*
-void MainDialog::updateList (const QString& iconPath, const QString& caption, const QDateTime& time)
-{
-    bool multipleDays = m_wtClock.exceedsDay ();
-    QTreeWidgetItem* i = new QTreeWidgetItem (m_gui.treeWidget);
-    i->setText (1, multipleDays ? QLocale::system().toString(time, QLocale::ShortFormat) : time.toString ("hh:mm:ss"));
-    i->setText (2, caption);
-    i->setIcon (0, QIcon (iconPath));
-    m_gui.treeWidget->resizeColumnToContents (0);
-}
-*/
+
 void MainDialog::keyPressEvent (QKeyEvent *e)
 {
     if (e->key () != Qt::Key_Escape)
@@ -65,15 +56,45 @@ void MainDialog::closeEvent (QCloseEvent *event)
 
 void MainDialog::addItem ()
 {
-    QTreeWidgetItem* i = new QTreeWidgetItem (m_gui.treeWidget);
+    ConnectionDialog dlg (this);
+    if (dlg.exec () == QDialog::Accepted)
+    {
+        QTreeWidgetItem* i = new QTreeWidgetItem (m_gui.treeWidget);
 
-    i->setCheckState(COLUMN::enabled    , Qt::Unchecked);
-    i->setFlags(i->flags() | Qt::ItemIsEditable);
+        i->setCheckState (COLUMN::enabled, Qt::Unchecked);
+        i->setText (COLUMN::localPort, dlg.getLocalPort());
+        i->setText (COLUMN::remotePort, dlg.getRemotePort());
+        i->setText (COLUMN::remoteAddress, dlg.getRemoteAddress());
+        i->setText (COLUMN::server, dlg.getServer());
 
-    QProcess* proc = new QProcess (this);
-    m_connections.append (proc); 
-    connect (proc, &QProcess::finished, this, &MainDialog::processTerminated);
+        QProcess* proc = new QProcess (this);
+        m_connections.append (proc); 
+        connect (proc, &QProcess::finished, this, &MainDialog::processTerminated);
+
+        saveConnections ();
+    }
 }   
+
+void MainDialog::editItem (QTreeWidgetItem *item, int column)
+{
+    if (item->checkState(column) == Qt::Unchecked)
+    {
+        ConnectionDialog dlg ("", 
+            item->text (COLUMN::remotePort),
+            item->text (COLUMN::localPort),
+            item->text (COLUMN::remoteAddress),
+            item->text (COLUMN::server),
+            this);
+        if (dlg.exec () == QDialog::Accepted)
+        {
+            item->setText (COLUMN::localPort, dlg.getLocalPort());
+            item->setText (COLUMN::remotePort, dlg.getRemotePort());
+            item->setText (COLUMN::remoteAddress, dlg.getRemoteAddress());
+            item->setText (COLUMN::server, dlg.getServer());
+            saveConnections ();
+        }
+    }
+}
 
 void MainDialog::itemClicked (QTreeWidgetItem *item, int column)
 {
@@ -101,7 +122,6 @@ void MainDialog::itemClicked (QTreeWidgetItem *item, int column)
                 }
                 else
                 {
-                    item->setFlags(item->flags() & ~Qt::ItemIsEditable);
                     if (!m_connectionsWatchdog.isActive())
                         m_connectionsWatchdog.start (2000);
                 }
@@ -115,16 +135,10 @@ void MainDialog::itemClicked (QTreeWidgetItem *item, int column)
                 if (proc->waitForFinished (1000))
                     proc->kill();
             }
-            item->setFlags(item->flags() | Qt::ItemIsEditable);
-        }
+            }
 
         qInfo() << m_gui.treeWidget->indexOfTopLevelItem(item) << ": " << item->checkState(column);
     }
-}
-
-void MainDialog::itemChanged (QTreeWidgetItem *item, int column)
-{
-    saveConnections ();
 }
 
 void MainDialog::saveConnections() const
@@ -161,7 +175,6 @@ void MainDialog::loadConnections()
         i->setText (COLUMN::remoteAddress, settings.value ("remoteAddress").toString());
         i->setText (COLUMN::server, settings.value ("server").toString());
         i->setCheckState(COLUMN::enabled, Qt::Unchecked);
-        i->setFlags(i->flags() | Qt::ItemIsEditable);
     //    m_gui.treeWidget->resizeColumnToContents (0);
 
         m_connections.append (new QProcess (this)); 
@@ -172,6 +185,8 @@ void MainDialog::loadConnections()
 
 void MainDialog::processTerminated(int exitCode, QProcess::ExitStatus exitStatus)
 {
+    Q_UNUSED (exitCode);
+    Q_UNUSED (exitStatus);
     QProcess* proc = qobject_cast<QProcess*>(sender());
     if (proc)
     {
@@ -179,7 +194,7 @@ void MainDialog::processTerminated(int exitCode, QProcess::ExitStatus exitStatus
         {
             if (m_connections[n] == proc)
             {
-                qInfo() << "connection " << n << " terminated";
+                qInfo() << "SIGNAL: connection #" << n << " terminated";
                 QTreeWidgetItem *item = m_gui.treeWidget->topLevelItem(n);
                 item->setCheckState (COLUMN::enabled, Qt::Unchecked);
             }
@@ -196,9 +211,14 @@ void MainDialog::checkConnections ()
             m_connections[n] &&
             m_connections[n]->state() == QProcess::NotRunning)
         {
-            qInfo() << "connection " << n << " terminated";
+            qInfo() << "WATCHDOG: connection #" << n << " terminated";
             item->setCheckState (COLUMN::enabled, Qt::Unchecked);
         }
     }
 
+}
+
+void MainDialog::shutdown ()
+{
+    // TODO
 }
