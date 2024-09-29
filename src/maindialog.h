@@ -36,11 +36,16 @@ public:
 
 private slots:
     void addItem ();
+    void cloneItem ();
+    void editItem ();
+    void deleteItem ();
     void itemClicked (QTreeWidgetItem *item, int column);
     void editItem (QTreeWidgetItem *item, int column);
     void processTerminated(int exitCode, QProcess::ExitStatus exitStatus  = QProcess::NormalExit);
     void checkConnections ();
     void shutdown ();
+    void connectAll ();
+    void disconnectAll ();
 
 private:
     void keyPressEvent (QKeyEvent *e);

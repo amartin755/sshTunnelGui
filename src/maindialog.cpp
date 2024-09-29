@@ -32,14 +32,18 @@ MainDialog::MainDialog(QApplication* theApp, QWidget *parent)
     m_gui.setupUi (this);
     m_gui.treeWidget->setRootIsDecorated(false);
 
-
     connect (&m_connectionsWatchdog, &QTimer::timeout, this, &MainDialog::checkConnections);
     connect (m_gui.btnAdd, &QPushButton::clicked, this, &MainDialog::addItem);
+    connect (m_gui.btnClone, &QPushButton::clicked, this, &MainDialog::cloneItem);
+    connect (m_gui.btnConnect, &QPushButton::clicked, this, &MainDialog::connectAll);
+    connect (m_gui.btnDisconnect, &QPushButton::clicked, this, &MainDialog::disconnectAll);
+    connect (m_gui.btnEdit, &QPushButton::clicked, this, qOverload<>(&MainDialog::editItem));
+    connect (m_gui.btnDelete, &QPushButton::clicked, this, &MainDialog::deleteItem);
     connect (m_gui.treeWidget, &QTreeWidget::itemClicked, this, &MainDialog::itemClicked);
-    connect (m_gui.treeWidget, &QTreeWidget::itemDoubleClicked, this, &MainDialog::editItem);
+    connect (m_gui.treeWidget, &QTreeWidget::itemDoubleClicked, this, qOverload<QTreeWidgetItem*, int>(&MainDialog::editItem));
     connect (theApp, &QApplication::aboutToQuit, this, &MainDialog::shutdown, Qt::DirectConnection);
-    loadConnections();
 
+    loadConnections();
 }
 
 void MainDialog::keyPressEvent (QKeyEvent *e)
@@ -84,9 +88,56 @@ void MainDialog::addItem ()
     }
 }   
 
-void MainDialog::editItem (QTreeWidgetItem *item, int column)
+void MainDialog::cloneItem ()
 {
-    if (item->checkState(column) == Qt::Unchecked)
+    auto items = m_gui.treeWidget->selectedItems();
+    if (items.size())
+    {
+        QTreeWidgetItem *item = items.first();
+        ConnectionDialog dlg (
+            item->text (COLUMN::name), 
+            item->text (COLUMN::remotePort),
+            item->text (COLUMN::localPort),
+            item->text (COLUMN::remoteAddress),
+            item->text (COLUMN::server),
+            item->text (COLUMN::url),
+            this);
+
+        if (dlg.exec () == QDialog::Accepted)
+        {
+            QTreeWidgetItem* i = new QTreeWidgetItem (m_gui.treeWidget);
+
+            i->setCheckState (COLUMN::enabled, Qt::Unchecked);
+            i->setText (COLUMN::name, dlg.getName());
+            i->setText (COLUMN::localPort, dlg.getLocalPort());
+            i->setText (COLUMN::remotePort, dlg.getRemotePort());
+            i->setText (COLUMN::remoteAddress, dlg.getRemoteAddress());
+            i->setText (COLUMN::server, dlg.getServer());
+            setURL (i, dlg.getUrl());
+
+            QProcess* proc = new QProcess (this);
+            m_connections.append (proc); 
+            connect (proc, &QProcess::finished, this, &MainDialog::processTerminated);
+
+            adjustColumnSize ();
+            saveConnections ();
+        }
+    }
+}
+
+void MainDialog::editItem ()
+{
+    auto items = m_gui.treeWidget->selectedItems();
+    if (items.size())
+    {
+        QTreeWidgetItem *item = items.first();
+        editItem (item, COLUMN::enabled);
+    }
+}
+
+void MainDialog::editItem (QTreeWidgetItem *item, int)
+{
+    if (item->checkState(COLUMN::enabled) == Qt::Unchecked)
     {
         ConnectionDialog dlg (
             item->text (COLUMN::name), 
@@ -109,6 +160,16 @@ void MainDialog::editItem (QTreeWidgetItem *item, int column)
         }
         adjustColumnSize ();
     }
+}
+
+void MainDialog::deleteItem ()
+{
+    auto items = m_gui.treeWidget->selectedItems();
+    for (const auto& i : items)
+    {
+        delete i;
+    }
+    saveConnections ();
 }
 
 void MainDialog::itemClicked (QTreeWidgetItem *item, int column)
@@ -258,7 +319,27 @@ void MainDialog::setURL (QTreeWidgetItem *item, const QString& url)
     item->setText (COLUMN::url, url);
 }
 
+void MainDialog::connectAll ()
+{
+    for (int n = 0; n < m_gui.treeWidget->topLevelItemCount(); n++)
+    {
+        QTreeWidgetItem *item = m_gui.treeWidget->topLevelItem (n);
+        item->setCheckState (COLUMN::enabled, Qt::Checked);
+        itemClicked (item, COLUMN::enabled);
+    }
+}
+
+void MainDialog::disconnectAll ()
+{
+    for (int n = 0; n < m_gui.treeWidget->topLevelItemCount(); n++)
+    {
+        QTreeWidgetItem *item = m_gui.treeWidget->topLevelItem (n);
+        item->setCheckState (COLUMN::enabled, Qt::Unchecked);
+        itemClicked (item, COLUMN::enabled);
+    }
+}
+
 void MainDialog::shutdown ()
 {
-    // TODO
+    disconnectAll ();
 }
