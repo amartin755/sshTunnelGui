@@ -47,6 +47,8 @@ private:
     void closeEvent (QCloseEvent *event);
     void saveConnections() const;
     void loadConnections();
+    void setURL (QTreeWidgetItem *item, const QString& url);
+    void adjustColumnSize ();
     QList<QProcess*> m_connections;
     Ui::Dialog m_gui;
     QTimer m_connectionsWatchdog;

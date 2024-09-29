@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>682</width>
+    <width>802</width>
     <height>476</height>
    </rect>
   </property>
@@ -27,19 +27,19 @@
       <bool>false</bool>
      </property>
      <property name="columnCount">
-      <number>5</number>
+      <number>7</number>
      </property>
      <attribute name="headerVisible">
       <bool>true</bool>
      </attribute>
      <column>
       <property name="text">
-       <string>Enabled</string>
+       <string/>
       </property>
      </column>
      <column>
       <property name="text">
-       <string notr="true">Local Port</string>
+       <string>Name</string>
       </property>
      </column>
      <column>
@@ -54,7 +54,17 @@
      </column>
      <column>
       <property name="text">
+       <string notr="true">Local Port</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
        <string>Server</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>URL</string>
       </property>
      </column>
     </widget>

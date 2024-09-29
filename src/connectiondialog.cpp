@@ -20,11 +20,12 @@
 
 
 ConnectionDialog::ConnectionDialog (QWidget *parent)
-    : ConnectionDialog (QString(), QString(), QString(), QString(), QString(), parent)
+    : ConnectionDialog (QString(), QString("443"), QString("443"), QString(), QString(), QString("https://localhost:%p"), parent)
 {
 }
 
-ConnectionDialog::ConnectionDialog (const QString& name, const QString& remotePort, const QString& localPort, const QString& remoteAddr, const QString& server, QWidget *parent)
+ConnectionDialog::ConnectionDialog (const QString& name, const QString& remotePort, const QString& localPort, 
+    const QString& remoteAddr, const QString& server, const QString& url, QWidget *parent)
     : QDialog (parent)
 {
     m_gui.setupUi (this);
@@ -33,10 +34,13 @@ ConnectionDialog::ConnectionDialog (const QString& name, const QString& remotePo
     connect (m_gui.remotePort, &QSpinBox::valueChanged, this, &ConnectionDialog::setLocalPort);
 
     m_gui.name->setText (name);
-    m_gui.remotePort->setValue (remotePort.toInt());
-    m_gui.localPort->setValue (localPort.toInt());
+    if (!remotePort.isEmpty())
+        m_gui.remotePort->setValue (remotePort.toInt());
+    if (!localPort.isEmpty())
+        m_gui.localPort->setValue (localPort.toInt());
     m_gui.remoteAddress->setText (remoteAddr);
     m_gui.server->setText (server);
+    m_gui.url->setText (url);
 
     m_gui.chkUseLocalPort->setChecked (m_gui.remotePort->value() == m_gui.localPort->value());
 }
@@ -76,4 +80,9 @@ const QString ConnectionDialog::getRemoteAddress () const
 const QString ConnectionDialog::getServer () const
 {
     return m_gui.server->text();
+}
+
+const QString ConnectionDialog::getUrl () const
+{
+    return m_gui.url->text();
 }

@@ -28,13 +28,15 @@ class ConnectionDialog : public QDialog
 
 public:
     explicit ConnectionDialog(QWidget *parent = nullptr);
-    ConnectionDialog(const QString& name, const QString& remotePort, const QString& localPort, const QString& remoteAddr, const QString& server, QWidget *parent);
+    ConnectionDialog(const QString& name, const QString& remotePort, const QString& localPort, 
+        const QString& remoteAddr, const QString& server, const QString& url, QWidget *parent);
     
     const QString getName () const;
     const QString getRemotePort () const;
     const QString getLocalPort () const;
     const QString getRemoteAddress () const;
     const QString getServer () const;
+    const QString getUrl () const;
 
 private slots:
     void enableLocalPort (bool enable);
