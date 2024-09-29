@@ -39,7 +39,7 @@ jobs:
     - name: Deploy
       run: cmake --install ${{github.workspace}}/build --prefix ${{github.workspace}}/install
 
-    - uses: actions/upload-artifact@v2
+    - uses: actions/upload-artifact@v3
       with: 
         name: release-windows-x64
         path: ${{runner.workspace}}/sshTunnelGui/install/
