@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>Dialog</class>
+ <widget class="QDialog" name="Dialog">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>682</width>
+    <height>476</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>SSH Tunnel</string>
+  </property>
+  <property name="windowIcon">
+   <iconset>
+    <normaloff>:/icon_main</normaloff>:/icon_main</iconset>
+  </property>
+  <property name="locale">
+   <locale language="English" country="Europe"/>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <widget class="QTreeWidget" name="treeWidget">
+     <property name="headerHidden">
+      <bool>false</bool>
+     </property>
+     <property name="columnCount">
+      <number>5</number>
+     </property>
+     <attribute name="headerVisible">
+      <bool>true</bool>
+     </attribute>
+     <column>
+      <property name="text">
+       <string>Enabled</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string notr="true">Local Port</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string notr="true">Remote Port</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string notr="true">Remote Address</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>Server</string>
+      </property>
+     </column>
+    </widget>
+   </item>
+   <item>
+    <widget class="QPushButton" name="btnAdd">
+     <property name="text">
+      <string>PushButton</string>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources>
+  <include location="stechuhr.qrc"/>
+ </resources>
+ <connections/>
+</ui>
