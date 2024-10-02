@@ -37,7 +37,7 @@ jobs:
         host:         mac
         target:       desktop
         cache:        true
-        setup-python: false
+        setup-python: true
 
     - name: Install Linux Dependencies
       if: matrix.os == 'ubuntu-latest'
