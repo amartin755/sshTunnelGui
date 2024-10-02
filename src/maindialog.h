@@ -35,17 +35,19 @@ public:
     explicit MainDialog(QApplication* theApp, QWidget *parent = nullptr);
 
 private slots:
-    void addItem ();
-    void cloneItem ();
-    void editItem ();
-    void deleteItem ();
+    void addConnection ();
+    void cloneConnection ();
+    void editConnection ();
+    void deleteConnection ();
     void itemClicked (QTreeWidgetItem *item, int column);
-    void editItem (QTreeWidgetItem *item, int column);
+    void editConnection (QTreeWidgetItem *item, int column);
     void processTerminated(int exitCode, QProcess::ExitStatus exitStatus  = QProcess::NormalExit);
     void checkConnections ();
     void shutdown ();
     void connectAll ();
     void disconnectAll ();
+    void addItemToList (const QString& name, const QString& localPort, const QString& remotePort,
+        const QString& remoteAddress, const QString& server, const QString& url);
 
 private:
     void keyPressEvent (QKeyEvent *e);

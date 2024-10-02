@@ -33,14 +33,14 @@ MainDialog::MainDialog(QApplication* theApp, QWidget *parent)
     m_gui.treeWidget->setRootIsDecorated(false);
 
     connect (&m_connectionsWatchdog, &QTimer::timeout, this, &MainDialog::checkConnections);
-    connect (m_gui.btnAdd, &QPushButton::clicked, this, &MainDialog::addItem);
-    connect (m_gui.btnClone, &QPushButton::clicked, this, &MainDialog::cloneItem);
+    connect (m_gui.btnAdd, &QPushButton::clicked, this, &MainDialog::addConnection);
+    connect (m_gui.btnClone, &QPushButton::clicked, this, &MainDialog::cloneConnection);
     connect (m_gui.btnConnect, &QPushButton::clicked, this, &MainDialog::connectAll);
     connect (m_gui.btnDisconnect, &QPushButton::clicked, this, &MainDialog::disconnectAll);
-    connect (m_gui.btnEdit, &QPushButton::clicked, this, qOverload<>(&MainDialog::editItem));
-    connect (m_gui.btnDelete, &QPushButton::clicked, this, &MainDialog::deleteItem);
+    connect (m_gui.btnEdit, &QPushButton::clicked, this, qOverload<>(&MainDialog::editConnection));
+    connect (m_gui.btnDelete, &QPushButton::clicked, this, &MainDialog::deleteConnection);
     connect (m_gui.treeWidget, &QTreeWidget::itemClicked, this, &MainDialog::itemClicked);
-    connect (m_gui.treeWidget, &QTreeWidget::itemDoubleClicked, this, qOverload<QTreeWidgetItem*, int>(&MainDialog::editItem));
+    connect (m_gui.treeWidget, &QTreeWidget::itemDoubleClicked, this, qOverload<QTreeWidgetItem*, int>(&MainDialog::editConnection));
     connect (theApp, &QApplication::aboutToQuit, this, &MainDialog::shutdown, Qt::DirectConnection);
 
     loadConnections();
@@ -52,8 +52,7 @@ void MainDialog::keyPressEvent (QKeyEvent *e)
         QDialog::keyPressEvent (e);
     if(e->key() == Qt::Key_Delete)
     {
-        delete m_gui.treeWidget->currentItem();
-        saveConnections ();
+        deleteConnection ();
     }
 }
 
@@ -64,31 +63,37 @@ void MainDialog::closeEvent (QCloseEvent *event)
     QDialog::closeEvent(event);
 }
 
-void MainDialog::addItem ()
+void MainDialog::addItemToList (const QString& name, const QString& localPort, const QString& remotePort,
+    const QString& remoteAddress, const QString& server, const QString& url)
+{
+    QTreeWidgetItem* i = new QTreeWidgetItem (m_gui.treeWidget);
+
+    i->setCheckState (COLUMN::enabled, Qt::Unchecked);
+    i->setText (COLUMN::name, name);
+    i->setText (COLUMN::localPort, localPort);
+    i->setText (COLUMN::remotePort, remotePort);
+    i->setText (COLUMN::remoteAddress, remoteAddress);
+    i->setText (COLUMN::server, server);
+    setURL (i, url);
+
+    QProcess* proc = new QProcess (this);
+    m_connections.append (proc); 
+    connect (proc, &QProcess::finished, this, &MainDialog::processTerminated);
+
+    adjustColumnSize ();
+}
+
+void MainDialog::addConnection ()
 {
     ConnectionDialog dlg (this);
     if (dlg.exec () == QDialog::Accepted)
     {
-        QTreeWidgetItem* i = new QTreeWidgetItem (m_gui.treeWidget);
-
-        i->setCheckState (COLUMN::enabled, Qt::Unchecked);
-        i->setText (COLUMN::name, dlg.getName());
-        i->setText (COLUMN::localPort, dlg.getLocalPort());
-        i->setText (COLUMN::remotePort, dlg.getRemotePort());
-        i->setText (COLUMN::remoteAddress, dlg.getRemoteAddress());
-        i->setText (COLUMN::server, dlg.getServer());
-        setURL (i, dlg.getUrl());
-
-        QProcess* proc = new QProcess (this);
-        m_connections.append (proc); 
-        connect (proc, &QProcess::finished, this, &MainDialog::processTerminated);
-
-        adjustColumnSize ();
+        addItemToList (dlg.getName(), dlg.getLocalPort(), dlg.getRemotePort(), dlg.getRemoteAddress(), dlg.getServer(), dlg.getUrl());
         saveConnections ();
     }
 }   
 
-void MainDialog::cloneItem ()
+void MainDialog::cloneConnection ()
 {
     auto items = m_gui.treeWidget->selectedItems();
     if (items.size())
@@ -105,37 +110,23 @@ void MainDialog::cloneItem ()
 
         if (dlg.exec () == QDialog::Accepted)
         {
-            QTreeWidgetItem* i = new QTreeWidgetItem (m_gui.treeWidget);
-
-            i->setCheckState (COLUMN::enabled, Qt::Unchecked);
-            i->setText (COLUMN::name, dlg.getName());
-            i->setText (COLUMN::localPort, dlg.getLocalPort());
-            i->setText (COLUMN::remotePort, dlg.getRemotePort());
-            i->setText (COLUMN::remoteAddress, dlg.getRemoteAddress());
-            i->setText (COLUMN::server, dlg.getServer());
-            setURL (i, dlg.getUrl());
-
-            QProcess* proc = new QProcess (this);
-            m_connections.append (proc); 
-            connect (proc, &QProcess::finished, this, &MainDialog::processTerminated);
-
-            adjustColumnSize ();
+            addItemToList (dlg.getName(), dlg.getLocalPort(), dlg.getRemotePort(), dlg.getRemoteAddress(), dlg.getServer(), dlg.getUrl());
             saveConnections ();
         }
     }
 }
 
-void MainDialog::editItem ()
+void MainDialog::editConnection ()
 {
     auto items = m_gui.treeWidget->selectedItems();
     if (items.size())
     {
         QTreeWidgetItem *item = items.first();
-        editItem (item, COLUMN::enabled);
+        editConnection (item, COLUMN::enabled);
     }
 }
 
-void MainDialog::editItem (QTreeWidgetItem *item, int)
+void MainDialog::editConnection (QTreeWidgetItem *item, int)
 {
     if (item->checkState(COLUMN::enabled) == Qt::Unchecked)
     {
@@ -157,17 +148,22 @@ void MainDialog::editItem (QTreeWidgetItem *item, int)
             item->setText (COLUMN::url, dlg.getUrl());
             setURL (item, dlg.getUrl());
             saveConnections ();
+            adjustColumnSize ();
         }
-        adjustColumnSize ();
     }
 }
 
-void MainDialog::deleteItem ()
+void MainDialog::deleteConnection ()
 {
     auto items = m_gui.treeWidget->selectedItems();
     for (const auto& i : items)
     {
+        int index = m_gui.treeWidget->indexOfTopLevelItem(i);
         delete i;
+
+        Q_ASSERT (index < m_connections.size());
+        delete m_connections[index];
+        m_connections.removeAt (index);
     }
     saveConnections ();
 }
@@ -246,23 +242,11 @@ void MainDialog::loadConnections()
     for (int n = 0; n < size; n++)
     {
         settings.setArrayIndex (n);
-
-        QTreeWidgetItem* i = new QTreeWidgetItem (m_gui.treeWidget);
-        i->setText (COLUMN::name, settings.value ("name").toString());
-        i->setText (COLUMN::localPort, settings.value ("localPort").toString());
-        i->setText (COLUMN::remotePort, settings.value ("remotePort").toString());
-        i->setText (COLUMN::remoteAddress, settings.value ("remoteAddress").toString());
-        i->setText (COLUMN::server, settings.value ("server").toString());
-        i->setCheckState(COLUMN::enabled, Qt::Unchecked);
-        setURL (i, settings.value ("url").toString());
-
-        m_connections.append (new QProcess (this)); 
+        addItemToList (settings.value ("name").toString(), settings.value ("localPort").toString(),
+            settings.value ("remotePort").toString(), settings.value ("remoteAddress").toString(),
+            settings.value ("server").toString(), settings.value ("url").toString());
     }
     settings.endArray ();
-    if (size)
-        m_gui.treeWidget->resizeColumnToContents (0);
-
-    adjustColumnSize ();
 }
 
 void MainDialog::adjustColumnSize ()
