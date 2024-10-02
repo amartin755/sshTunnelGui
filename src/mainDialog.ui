@@ -131,7 +131,7 @@
   </layout>
  </widget>
  <resources>
-  <include location="stechuhr.qrc"/>
+  <include location="sshTunnelGui.qrc"/>
  </resources>
  <connections/>
 </ui>

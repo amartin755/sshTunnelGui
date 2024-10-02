@@ -1,9 +1,9 @@
-# Stechuhr
+# sshTunnelGui
 
-A tiny utility for tracking of working time.
+A GUI for configuration of SSH port forwarding tunnels.
 
 ## Build instructions
-Stechuhr has been successfully compiled on fedora linux (x64) with gcc and on windows with MSVC.
+sshTunnelGui has been successfully compiled on fedora linux (x64) with gcc and on windows with MSVC.
 Theoretically it should also be compilable with other C++17 compilers, but this was never tested.
 
 ### Dependencies
@@ -14,7 +14,7 @@ Theoretically it should also be compilable with other C++17 compilers, but this 
 ### How to build
 #### Setup
 
-    cd stechuhr
+    cd sshTunnelGui
     cmake -B build
 
 For debugging add to cmake call:

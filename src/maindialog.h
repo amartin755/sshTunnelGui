@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 /*
- * STECHUHR <https://github.com/amartin755/stechuhr>
+ * SSHTUNNELGUI <https://github.com/amartin755/sshTunnelGui>
  * Copyright (C) 2023 Andreas Martin (netnag@mailbox.org)
  *
  * This program is free software: you can redistribute it and/or modify
