@@ -13,7 +13,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os: [ubuntu-latest, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
   
     steps:
@@ -25,6 +25,16 @@ jobs:
       with:
         version:      6.5.*
         host:         windows
+        target:       desktop
+        cache:        true
+        setup-python: false
+
+    - name: Install Qt on MAC
+      if: matrix.os == 'macos-latest'
+      uses: jurplel/install-qt-action@v3
+      with:
+        version:      6.5.*
+        host:         mac
         target:       desktop
         cache:        true
         setup-python: false

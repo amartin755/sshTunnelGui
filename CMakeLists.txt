@@ -91,8 +91,6 @@ set (SOURCES
 )
 
 qt_add_executable (sshTunnelGui ${SOURCES})
-#qt_add_translations(sshTunnelGui
-#    TS_FILES ${TS_DIR}/stechuhr_de.ts)
 
 target_include_directories (sshTunnelGui
     PRIVATE ${SOURCE_DIR})
