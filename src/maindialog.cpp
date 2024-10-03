@@ -26,13 +26,12 @@
 enum COLUMN {enabled = 0, name, remotePort, remoteAddress, localPort, server, url};
 
 MainDialog::MainDialog(QApplication* theApp, QWidget *parent)
-    : QDialog (parent), m_connectionsWatchdog (this)
+    : QDialog (parent)
 {
     setWindowFlags (Qt::Window);
     m_gui.setupUi (this);
     m_gui.treeWidget->setRootIsDecorated(false);
 
-    connect (&m_connectionsWatchdog, &QTimer::timeout, this, &MainDialog::checkConnections);
     connect (m_gui.btnAdd, &QPushButton::clicked, this, &MainDialog::addConnection);
     connect (m_gui.btnClone, &QPushButton::clicked, this, &MainDialog::cloneConnection);
     connect (m_gui.btnConnect, &QPushButton::clicked, this, &MainDialog::connectAll);
@@ -77,6 +76,7 @@ void MainDialog::addItemToList (const QString& name, const QString& localPort, c
     setURL (i, url);
 
     QProcess* proc = new QProcess (this);
+    proc->setProcessChannelMode(QProcess::MergedChannels);
     m_connections.append (proc); 
     connect (proc, &QProcess::finished, this, &MainDialog::processTerminated);
 
@@ -181,21 +181,9 @@ void MainDialog::itemClicked (QTreeWidgetItem *item, int column)
         {
             if (proc->state() == QProcess::NotRunning)
             {
-                QStringList args;
-                args << "-N";
-                args << "-L";
-                args << item->text(COLUMN::localPort) + QString(":") + item->text(COLUMN::remoteAddress) + QString(":") + item->text(COLUMN::remotePort);
-                args << item->text(COLUMN::server);
-                qInfo() << args;
-                proc->start ("ssh", args);
-                if (!proc->waitForStarted())
+                if (!openSSHSession (proc, item->text(COLUMN::localPort), item->text(COLUMN::remoteAddress), item->text(COLUMN::remotePort), item->text(COLUMN::server)))
                 {
                     QMessageBox::critical (this, "", tr("Could not start ssh client"));
-                }
-                else
-                {
-                    if (!m_connectionsWatchdog.isActive())
-                        m_connectionsWatchdog.start (2000);
                 }
             }
         }
@@ -203,11 +191,9 @@ void MainDialog::itemClicked (QTreeWidgetItem *item, int column)
         {
             if (proc->state() == QProcess::Running)
             {
-                proc->terminate();
-                if (proc->waitForFinished (1000))
-                    proc->kill();
+                closeSSHSession (proc);
             }
-            }
+        }
 
         qInfo() << m_gui.treeWidget->indexOfTopLevelItem(item) << ": " << item->checkState(column);
     }
@@ -266,31 +252,34 @@ void MainDialog::processTerminated(int exitCode, QProcess::ExitStatus exitStatus
         {
             if (m_connections[n] == proc)
             {
-                qInfo() << "SIGNAL: connection #" << n << " terminated";
+                qInfo() << "SIGNAL: connection #" << n << " terminated" << exitCode << " " << exitStatus;
                 QTreeWidgetItem *item = m_gui.treeWidget->topLevelItem(n);
 
-                QString tooltip (proc->readAllStandardError());
-                item->setToolTip (0, tooltip);
+                /*
+                 * tested (linux) usecases
+                 * proc->terminate (after successful login):  exitCode = 0 exitStatus = NormalExit, no output
+                 * kill sshclient (TERM): exitCode = 0 exitStatus = NormalExit, no output
+                 * kill sshclient (KILL): exitCode = 9 exitStatus = CrashExit, no output
+                 * wrong credentials:  exitCode = 255 exitStatus = NormalExit, error message
+                 * server nicht erreichbar:  exitCode = 255 exitStatus = NormalExit, error message
+                 * kill sshserver (TERM): exitCode = 255 exitStatus = NormalExit, error message
+                 * kill sshserver (KILL): exitCode = 255 exitStatus = NormalExit, error message
+                */
+                if (exitCode || exitStatus != QProcess::NormalExit)
+                {
+                    QMessageBox msgBox;
+                    QString sshOutput (proc->readAllStandardOutput());
 
-
+                    msgBox.setText (QString("The SSH connection '%1' was terminated unexpectedly.").arg (item->text(COLUMN::name)));
+                    if (!sshOutput.isEmpty())
+                        msgBox.setInformativeText (sshOutput);
+                    msgBox.setStandardButtons (QMessageBox::Ok);
+                    msgBox.setIcon (QMessageBox::Critical);
+                    msgBox.exec();
+                }
 
                 item->setCheckState (COLUMN::enabled, Qt::Unchecked);
             }
-        }
-    }
-}
-
-void MainDialog::checkConnections ()
-{
-    for (int n = 0; n < m_connections.size(); n++)
-    {
-        QTreeWidgetItem *item = m_gui.treeWidget->topLevelItem(n);
-        if (item->checkState (COLUMN::enabled) == Qt::Checked && 
-            m_connections[n] &&
-            m_connections[n]->state() == QProcess::NotRunning)
-        {
-            qInfo() << "WATCHDOG: connection #" << n << " terminated";
-            item->setCheckState (COLUMN::enabled, Qt::Unchecked);
         }
     }
 }
@@ -332,4 +321,33 @@ void MainDialog::disconnectAll ()
 void MainDialog::shutdown ()
 {
     disconnectAll ();
+}
+
+
+bool MainDialog::openSSHSession (QProcess* proc, const QString& localPort, const QString& remoteAddress, const QString& remotePort, const QString& server) const
+{
+    Q_ASSERT (proc);
+    QStringList args;
+    args << "-N";                           // no remote command execution
+    args << "-o PasswordAuthentication=no"; // don't accept password logins
+    args << "-L";
+    args << localPort + QString(":") + remoteAddress + QString(":") + remotePort;
+    args << server;
+    qInfo() << "start ssh" << args;
+    proc->start ("ssh", args);
+
+    return proc->waitForStarted();
+}
+
+void MainDialog::closeSSHSession (QProcess* proc) const
+{
+    Q_ASSERT (proc);
+
+    qInfo() << "terminate ssh";
+    proc->terminate();
+    if (!proc->waitForFinished (1000))
+    {
+        qInfo() << "killing ssh";
+        proc->kill();
+    }
 }

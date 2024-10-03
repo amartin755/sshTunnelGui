@@ -42,7 +42,6 @@ private slots:
     void itemClicked (QTreeWidgetItem *item, int column);
     void editConnection (QTreeWidgetItem *item, int column);
     void processTerminated(int exitCode, QProcess::ExitStatus exitStatus  = QProcess::NormalExit);
-    void checkConnections ();
     void shutdown ();
     void connectAll ();
     void disconnectAll ();
@@ -56,10 +55,11 @@ private:
     void loadConnections();
     void setURL (QTreeWidgetItem *item, const QString& url);
     void adjustColumnSize ();
+    bool openSSHSession (QProcess* proc, const QString& localPort, 
+        const QString& remoteAddress, const QString& remotePort, const QString& server) const;
+    void closeSSHSession (QProcess* proc) const;
     QList<QProcess*> m_connections;
     Ui::Dialog m_gui;
-    QTimer m_connectionsWatchdog;
-
 };
 
 #endif
