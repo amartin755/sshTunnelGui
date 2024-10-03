@@ -26,7 +26,7 @@ endif()
 
 # check dependencies
 ###############################################################################
-find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets LinguistTools Sql)
+find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets LinguistTools)
 if (Qt6Widgets_VERSION VERSION_GREATER_EQUAL 6.3)
     qt_standard_project_setup()
 endif ()
