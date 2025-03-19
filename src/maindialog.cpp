@@ -77,7 +77,7 @@ void MainDialog::addItemToList (const QString& name, const QString& localPort, c
 
     QProcess* proc = new QProcess (this);
     proc->setProcessChannelMode(QProcess::MergedChannels);
-    m_connections.append (proc); 
+    m_connections.append (proc);
     connect (proc, &QProcess::finished, this, &MainDialog::processTerminated);
 
     adjustColumnSize ();
@@ -91,7 +91,7 @@ void MainDialog::addConnection ()
         addItemToList (dlg.getName(), dlg.getLocalPort(), dlg.getRemotePort(), dlg.getRemoteAddress(), dlg.getServer(), dlg.getUrl());
         saveConnections ();
     }
-}   
+}
 
 void MainDialog::cloneConnection ()
 {
@@ -100,7 +100,7 @@ void MainDialog::cloneConnection ()
     {
         QTreeWidgetItem *item = items.first();
         ConnectionDialog dlg (
-            item->text (COLUMN::name), 
+            item->text (COLUMN::name),
             item->text (COLUMN::remotePort),
             item->text (COLUMN::localPort),
             item->text (COLUMN::remoteAddress),
@@ -131,7 +131,7 @@ void MainDialog::editConnection (QTreeWidgetItem *item, int)
     if (item->checkState(COLUMN::enabled) == Qt::Unchecked)
     {
         ConnectionDialog dlg (
-            item->text (COLUMN::name), 
+            item->text (COLUMN::name),
             item->text (COLUMN::remotePort),
             item->text (COLUMN::localPort),
             item->text (COLUMN::remoteAddress),
@@ -191,6 +191,7 @@ void MainDialog::itemClicked (QTreeWidgetItem *item, int column)
         {
             if (proc->state() == QProcess::Running)
             {
+                m_aboutToClose.append (proc);
                 closeSSHSession (proc);
             }
         }
@@ -252,8 +253,12 @@ void MainDialog::processTerminated(int exitCode, QProcess::ExitStatus exitStatus
         {
             if (m_connections[n] == proc)
             {
-                qInfo() << "SIGNAL: connection #" << n << " terminated" << exitCode << " " << exitStatus;
                 QTreeWidgetItem *item = m_gui.treeWidget->topLevelItem(n);
+                qsizetype index = m_aboutToClose.indexOf (proc);
+                bool closedByUser = index >= 0;
+                if (index >= 0)
+                    m_aboutToClose.removeAt (index);
+                qInfo() << "SIGNAL: connection #" << n << " terminated" << exitCode << " " << exitStatus << "closedByUser " << closedByUser;
 
                 /*
                  * tested (linux) usecases
@@ -261,11 +266,12 @@ void MainDialog::processTerminated(int exitCode, QProcess::ExitStatus exitStatus
                  * kill sshclient (TERM): exitCode = 0 exitStatus = NormalExit, no output
                  * kill sshclient (KILL): exitCode = 9 exitStatus = CrashExit, no output
                  * wrong credentials:  exitCode = 255 exitStatus = NormalExit, error message
-                 * server nicht erreichbar:  exitCode = 255 exitStatus = NormalExit, error message
+                 * server not reachable:  exitCode = 255 exitStatus = NormalExit, error message
                  * kill sshserver (TERM): exitCode = 255 exitStatus = NormalExit, error message
                  * kill sshserver (KILL): exitCode = 255 exitStatus = NormalExit, error message
                 */
-                if (exitCode || exitStatus != QProcess::NormalExit)
+                // print messagebox only if client terminated unexpected
+                if (!closedByUser && (exitCode || exitStatus != QProcess::NormalExit))
                 {
                     QMessageBox msgBox;
                     QString sshOutput (proc->readAllStandardOutput());
@@ -277,7 +283,6 @@ void MainDialog::processTerminated(int exitCode, QProcess::ExitStatus exitStatus
                     msgBox.setIcon (QMessageBox::Critical);
                     msgBox.exec();
                 }
-
                 item->setCheckState (COLUMN::enabled, Qt::Unchecked);
             }
         }

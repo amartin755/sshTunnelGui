@@ -55,10 +55,11 @@ private:
     void loadConnections();
     void setURL (QTreeWidgetItem *item, const QString& url);
     void adjustColumnSize ();
-    bool openSSHSession (QProcess* proc, const QString& localPort, 
+    bool openSSHSession (QProcess* proc, const QString& localPort,
         const QString& remoteAddress, const QString& remotePort, const QString& server) const;
     void closeSSHSession (QProcess* proc) const;
     QList<QProcess*> m_connections;
+    QList<const QProcess*> m_aboutToClose;
     Ui::Dialog m_gui;
 };
 
